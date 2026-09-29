@@ -34,10 +34,73 @@ Built with **Pygame + Pymunk** for realistic rigid-body physics, accurate scorin
 - **Live HUD** — Real-time scores, timer, Midfield parking bonus, matchload inventory tracking, and a dedicated Skills score panel.
 - **Video Recording** — Matches can be recorded to MP4 (720×720 @ 30 fps).
 - **Headless Benchmark Harness** — `bench.py` for fast bot-vs-bot evaluation; `run_bot_skills.py` for skills-mode runs.
+- **Stable-Baselines3 Skills Adapter** — Gymnasium-compatible single-robot
+  environment for PPO-based skills strategy planning and repeatable testing.
 
 ---
 
 ## Quick Start
+
+### Stable-Baselines3 Skills Training
+
+Install the dependencies from `requirements.txt`, then train a PPO policy
+against the 60-second skills simulator:
+
+```bash
+python -m training.train_sb3_skills train --timesteps 100000
+python -m training.train_sb3_skills evaluate \
+  --model artifacts/models/sb3_skills.zip --episodes 5
+python -m training.train_sb3_skills evaluate \
+  --model artifacts/models/sb3_skills.zip --render
+```
+
+`training/sb3_skills_env.py` exposes the existing 610-dimensional simulator
+observation and a nine-value action vector (left/right drive plus seven
+skills controls). The adapter uses Gymnasium's five-value `step` API and
+reports `skills_score`, `score_delta`, and `time_remaining` in `info`.
+
+PPO can collect several independent 60-second Skills runs in parallel. The
+highest-scoring completed run is tracked as the current elite trajectory while
+PPO updates the shared strategy from the full rollout batch:
+
+```bash
+python -m training.train_sb3_skills train \
+  --algorithm ppo --envs 8 --timesteps 100000
+```
+
+For a basic live control surface with start/stop, parallel-run count,
+timesteps, delay, score, episode count, and the current elite robot path:
+
+```bash
+python -m training.sb3_skills_dashboard
+```
+
+In a headless Codespace or server, use the console dashboard mode:
+
+```bash
+python -m training.sb3_skills_dashboard --headless --envs 8 --timesteps 100000
+```
+
+The dashboard saves the latest PPO policy to
+`artifacts/models/sb3_skills_dashboard.zip`. Set delay to `0` for maximum
+throughput or increase it to inspect training updates more slowly. The
+simulator timer remains fixed at exactly 60 seconds for every run.
+
+Validate the adapter before training, or choose another continuous-control SB3
+algorithm when experimenting with strategy planning:
+
+```bash
+python -m training.train_sb3_skills check
+python -m training.train_sb3_skills train --algorithm a2c --timesteps 100000
+python -m training.train_sb3_skills train --algorithm sac --timesteps 100000
+```
+
+The evaluation command must use the same algorithm used to create the model.
+
+```bash
+python -m training.train_sb3_skills evaluate \
+  --algorithm sac --model artifacts/models/sb3_skills.zip --episodes 5
+```
 
 ```bash
 # 1. Clone and enter the repo
