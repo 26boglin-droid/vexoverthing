@@ -299,7 +299,7 @@ if __name__ == "__main__":
     arguments = _parser().parse_args()
     if arguments.headless:
         _run_headless(arguments)
-    elif not os.environ.get("DISPLAY"):
+    elif os.name != "nt" and not os.environ.get("DISPLAY"):
         print(
             "No graphical display is available. Run with --headless in this "
             "Codespace, or launch from a desktop session to use the Tkinter UI."
